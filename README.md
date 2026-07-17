@@ -1,4 +1,4 @@
-# ORCID harvester
+# ORCID harvester 🍊 
 
 Lists researchers affiliated with an institution (Example University by default) and their publications, using the **ORCID public API**.
 
