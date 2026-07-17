@@ -1,0 +1,13 @@
+[project]
+name = "orchard-harvest"
+version = "0.1.0"
+description = "List institution-affiliated authors and their publications from the ORCID public API"
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = []
+
+[dependency-groups]
+dev = ["pytest==8.4.2"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
