@@ -20,6 +20,40 @@ class OrcidApiError(Exception):
     """Raised when the ORCID API returns an error or unusable response."""
 
 
+def _shape_error(field_name: str, expected: str, value: object, url: str) -> OrcidApiError:
+    return OrcidApiError(
+        f"Unexpected ORCID API response shape for {url}: "
+        f"{field_name} should be {expected}, got {type(value).__name__}"
+    )
+
+
+def _expect_list(value: object, field_name: str, url: str) -> list:
+    """Return value as a list; None/absent means empty, anything else must be a list."""
+    if value is None:
+        return []
+    if not isinstance(value, list):
+        raise _shape_error(field_name, "a list", value, url)
+    return value
+
+
+def _expect_dict(value: object, field_name: str, url: str) -> dict:
+    """Return value as a dict; None/absent means empty, anything else must be a dict."""
+    if value is None:
+        return {}
+    if not isinstance(value, dict):
+        raise _shape_error(field_name, "an object", value, url)
+    return value
+
+
+def _expect_str(value: object, field_name: str, url: str) -> str | None:
+    """Return value as a str or None; anything else is a shape violation."""
+    if value is None:
+        return None
+    if not isinstance(value, str):
+        raise _shape_error(field_name, "a string", value, url)
+    return value
+
+
 @dataclass(frozen=True)
 class Author:
     """One researcher found by the affiliation search."""
@@ -50,15 +84,17 @@ class OrcidClient:
         url = f"{self._config.api_base_url}/expanded-search/?{params}"
 
         payload = self._get_json(url)
-        results = payload.get("expanded-result") or []
+        results = _expect_list(payload.get("expanded-result"), "expanded-result", url)
         total_found = payload.get("num-found", 0)
+        if not isinstance(total_found, int):
+            total_found = 0
         logger.info(
             "event=author_search affiliation=%r returned=%d total_available=%d",
             self._config.affiliation,
             len(results),
             total_found,
         )
-        return [self._parse_author(entry) for entry in results]
+        return [self._parse_author(_expect_dict(entry, "expanded-result[]", url)) for entry in results]
 
     def fetch_work_titles(self, orcid_id: str) -> list[str]:
         """Fetch up to max_works publication titles for one ORCID iD."""
@@ -69,8 +105,8 @@ class OrcidClient:
         payload = self._get_json(url)
 
         titles: list[str] = []
-        for group in payload.get("group") or []:
-            title = self._extract_title(group)
+        for group in _expect_list(payload.get("group"), "group", url):
+            title = self._extract_title(_expect_dict(group, "group[]", url), url)
             if title:
                 titles.append(title)
             if len(titles) >= self._config.max_works:
@@ -80,22 +116,28 @@ class OrcidClient:
     @staticmethod
     def _parse_author(entry: dict) -> Author:
         """Build an Author from one expanded-search result entry."""
-        orcid_id = entry.get("orcid-id", "")
-        given = entry.get("given-names") or ""
-        family = entry.get("family-names") or ""
-        credit = entry.get("credit-name") or ""
+        orcid_id = _expect_str(entry.get("orcid-id"), "orcid-id", "expanded-search") or ""
+        given = _expect_str(entry.get("given-names"), "given-names", "expanded-search") or ""
+        family = _expect_str(entry.get("family-names"), "family-names", "expanded-search") or ""
+        credit = _expect_str(entry.get("credit-name"), "credit-name", "expanded-search") or ""
         name = credit or f"{given} {family}".strip() or "(name not public)"
         return Author(orcid_id=orcid_id, name=name)
 
     @staticmethod
-    def _extract_title(group: dict) -> str | None:
-        """Pull the preferred title out of one works group, if present."""
-        summaries = group.get("work-summary") or []
+    def _extract_title(group: dict, url: str = "works") -> str | None:
+        """Pull the preferred title out of one works group, if present.
+
+        Missing fields are a legitimate fallback (None); wrong types are an
+        API contract violation and raise OrcidApiError.
+        """
+        summaries = _expect_list(group.get("work-summary"), "work-summary", url)
         if not summaries:
             return None
-        title_block = summaries[0].get("title") or {}
-        title = (title_block.get("title") or {}).get("value")
-        return title.strip() if title else None
+        summary = _expect_dict(summaries[0], "work-summary[0]", url)
+        title_block = _expect_dict(summary.get("title"), "title", url)
+        inner = _expect_dict(title_block.get("title"), "title.title", url)
+        title = _expect_str(inner.get("value"), "title.title.value", url)
+        return title.strip() or None if title else None
 
     def _get_json(self, url: str) -> dict:
         """GET a URL and decode the JSON body, with basic error handling."""
