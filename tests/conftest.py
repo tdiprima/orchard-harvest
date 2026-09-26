@@ -17,3 +17,5 @@ ENV_VARS = (
 def clean_env(monkeypatch):
     for name in ENV_VARS:
         monkeypatch.delenv(name, raising=False)
+    # Never let a developer's local .env leak into tests.
+    monkeypatch.setattr("orcid_harvest.config.load_dotenv", lambda *a, **k: None)

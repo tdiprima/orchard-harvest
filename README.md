@@ -35,7 +35,7 @@ ORCID's published public-API ceiling is **24 requests/second, burst 40**. This t
 
 1. Go to <https://orcid.org/signin> and try "Forgot your password?" with your `@example.com` address. If ORCID has an account for it, you'll get a reset email. If not, it says no account exists.
 2. Search your name at <https://orcid.org/orcid-search/search> — if a record shows your affiliation, you (or your institution) already created an iD.
-3. Example University is an ORCID member institution. Check with the your university library / Office of Research before creating a second iD — duplicate iDs are a real problem and have to be merged manually.
+3. Many universities (including Example University) are ORCID member institutions. Check with your university library or research office before creating a second iD — duplicate iDs are a real problem and have to be merged manually.
 4. Being *registered as a researcher* (having an ORCID iD) is separate from having *API credentials*. For credentials, sign in and look under **Developer Tools** in your account settings. If Developer Tools shows a client ID, you're set up for the token flow below.
 
 ### Optional: getting a public API token
@@ -87,7 +87,7 @@ Defaults to 10 Example University authors with up to 5 works each. Tune with env
 ```bash
 ORCID_MAX_AUTHORS=25 ORCID_MAX_WORKS=10 uv run main.py
 
-# Any institution, not just Example University
+# Any institution, not just the default
 ORCID_AFFILIATION="Some Laboratory" uv run main.py
 
 # Save to a file
@@ -96,7 +96,7 @@ uv run main.py > authors.txt
 
 ## Configuration
 
-All configuration comes from environment variables and is validated at startup — a bad value exits immediately with a clear message rather than failing halfway through.
+All configuration comes from environment variables (or a `.env` file in the working directory — see `.env.example`; real environment variables take precedence) and is validated at startup — a bad value exits immediately with a clear message rather than failing halfway through.
 
 | Variable | Default | Meaning |
 |---|---|---|
@@ -139,7 +139,7 @@ Tests cover empty results, missing names, missing titles, malformed ORCID iDs, a
 
 ## Caveats
 
-- **Coverage is partial.** Only researchers who created an ORCID iD *and* recorded a Example University affiliation appear — This is not a complete faculty roster.
+- **Coverage is partial.** Only researchers who created an ORCID iD *and* recorded an Example University affiliation appear — This is not a complete faculty roster.
 - **Affiliation matching is by string.** `Example University` will not match records that say only `Example State University` or `Example University Medicine`. Vary `ORCID_AFFILIATION` to catch those.
 - **Works lists are self-reported** and may be incomplete, duplicated across groups, or stale. Some records list no public works at all.
 - **Names can be private.** Records with name visibility restricted show `(name not public)`.

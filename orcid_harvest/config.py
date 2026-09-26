@@ -60,8 +60,30 @@ def _read_api_base_url() -> str:
     return raw_value.rstrip("/")
 
 
+def load_dotenv(path: str | os.PathLike[str] = ".env") -> None:
+    """Load KEY=VALUE lines from a .env file into os.environ without overriding existing vars."""
+    try:
+        with open(path, encoding="utf-8") as handle:
+            lines = handle.readlines()
+    except OSError:
+        return
+    for line in lines:
+        line = line.strip()
+        if not line or line.startswith("#") or "=" not in line:
+            continue
+        key, _, value = line.partition("=")
+        key = key.strip()
+        if key.startswith("export "):
+            key = key[len("export "):].strip()
+        value = value.strip()
+        if len(value) >= 2 and value[0] == value[-1] and value[0] in "\"'":
+            value = value[1:-1]
+        os.environ.setdefault(key, value)
+
+
 def load_config() -> Config:
-    """Build a Config from the environment, failing fast on bad values."""
+    """Build a Config from .env (if present) and the environment, failing fast on bad values."""
+    load_dotenv()
     affiliation = os.environ.get("ORCID_AFFILIATION", DEFAULT_AFFILIATION).strip()
     if not affiliation:
         raise ConfigError("ORCID_AFFILIATION must not be empty")

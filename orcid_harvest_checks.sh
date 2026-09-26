@@ -7,7 +7,7 @@ curl -s -m 20 -H "Accept: application/json" \
   | head
 
 # Test the ORCID works endpoint for one iD and summarize the first few work groups
-curl -s -m 20 -H "Accept: application/json" "https://pub.orcid.org/v3.0/0000-0001-5109-3700/works" | python3 -c "
+curl -s -m 20 -H "Accept: application/json" "https://pub.orcid.org/v3.0/0000-0002-1825-0097/works" | python3 -c "
 import json,sys
 data=json.load(sys.stdin)
 groups=data.get('group',[])

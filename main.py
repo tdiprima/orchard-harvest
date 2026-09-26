@@ -1,4 +1,4 @@
-"""Entry point: list Example University authors and their publications."""
+"""Entry point: list authors affiliated with the configured institution and their publications."""
 
 import logging
 import sys

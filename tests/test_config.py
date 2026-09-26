@@ -1,6 +1,7 @@
 """Tests for environment-driven configuration."""
 
 import logging
+import os
 from unittest.mock import patch
 
 import pytest
@@ -17,6 +18,7 @@ from orcid_harvest.config import (
     ConfigError,
     configure_logging,
     load_config,
+    load_dotenv,
 )
 
 
@@ -107,3 +109,23 @@ def test_configure_logging_rejects_invalid_level(monkeypatch, level):
     monkeypatch.setenv("LOG_LEVEL", level)
     with pytest.raises(ConfigError):
         configure_logging()
+
+
+def test_load_dotenv_sets_missing_vars_only(monkeypatch, tmp_path):
+    env_file = tmp_path / ".env"
+    env_file.write_text(
+        "# comment\n"
+        "ORCID_AFFILIATION=\"Example University\"\n"
+        "export ORCID_MAX_WORKS=7\n"
+        "ORCID_MAX_AUTHORS=99\n"
+        "garbage line\n"
+    )
+    monkeypatch.setenv("ORCID_MAX_AUTHORS", "3")
+    load_dotenv(env_file)
+    assert os.environ["ORCID_AFFILIATION"] == "Example University"
+    assert os.environ["ORCID_MAX_WORKS"] == "7"
+    assert os.environ["ORCID_MAX_AUTHORS"] == "3"
+
+
+def test_load_dotenv_missing_file_is_noop(tmp_path):
+    load_dotenv(tmp_path / "nope")
