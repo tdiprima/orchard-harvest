@@ -23,14 +23,33 @@ ORCID_MAX_AUTHORS=5 ORCID_MAX_WORKS=3 uv run main.py
 # Run the test suite
 uv run --with pytest==8.4.2 python -m pytest -q 2>&1 | tail -5
 
-# Mutation check: verify tests catch a changed placeholder string
+# Mutation check: verify tests catch a changed placeholder string.
+# The mutated run is EXPECTED to fail; restore the source via an exit trap
+# so the file is put back even if this script aborts partway through.
+restore_formatter() {
+  if [[ -f orcid_harvest/formatter.py.bak ]]; then
+    mv orcid_harvest/formatter.py.bak orcid_harvest/formatter.py
+  fi
+}
+trap restore_formatter EXIT
 sed -i.bak 's/no public works listed/none/' orcid_harvest/formatter.py
+set +e
 uv run --with pytest==8.4.2 python -m pytest -q 2>&1 | tail -2
-mv orcid_harvest/formatter.py.bak orcid_harvest/formatter.py
+mutation_status=${PIPESTATUS[0]}
+set -e
+restore_formatter
+trap - EXIT
+if [[ "$mutation_status" -eq 0 ]]; then
+  echo "mutation check FAILED: tests did not catch the mutated placeholder" >&2
+  exit 1
+fi
+echo "mutation check ok (pytest exit=$mutation_status)"
 
 # Verify happy path exits cleanly (expect 0)
+set +e
 ORCID_MAX_AUTHORS=3 ORCID_MAX_WORKS=2 uv run main.py >/dev/null 2>&1
 status=$?
+set -e
 echo "ok exit=$status"
 
 # Verify invalid config exits with an error (expect non-zero)

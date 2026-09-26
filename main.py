@@ -17,10 +17,12 @@ def harvest(client: OrcidClient) -> list[AuthorWorks]:
     for author in authors:
         try:
             titles = client.fetch_work_titles(author.orcid_id)
+            failed = False
         except OrcidApiError:
             logger.exception("event=fetch_works_failed orcid_id=%s", author.orcid_id)
             titles = []
-        results.append(AuthorWorks(author=author, work_titles=titles))
+            failed = True
+        results.append(AuthorWorks(author=author, work_titles=titles, fetch_failed=failed))
         client.throttle()
     return results
 
@@ -42,6 +44,10 @@ def main() -> int:
         return 1
 
     print(format_author_list(results))
+    failed_count = sum(1 for result in results if result.fetch_failed)
+    if failed_count:
+        logger.error("event=harvest_incomplete failed_authors=%d", failed_count)
+        return 1
     return 0
 
 

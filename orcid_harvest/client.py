@@ -34,6 +34,7 @@ class AuthorWorks:
 
     author: Author
     work_titles: list[str] = field(default_factory=list)
+    fetch_failed: bool = False
 
 
 class OrcidClient:
@@ -112,6 +113,8 @@ class OrcidClient:
             raise OrcidApiError(f"ORCID API returned HTTP {exc.code} for {url}") from exc
         except urllib.error.URLError as exc:
             raise OrcidApiError(f"Could not reach ORCID API at {url}: {exc.reason}") from exc
+        except (TimeoutError, OSError, ValueError) as exc:
+            raise OrcidApiError(f"Failed reading ORCID API response from {url}: {exc}") from exc
 
         try:
             payload = json.loads(body)

@@ -31,3 +31,12 @@ def test_multiple_authors_separated_by_blank_line():
         _author_works("Second", "0000-0000-0000-0004", ["B"]),
     ]
     assert "\n\n" in format_author_list(results)
+
+
+def test_failed_fetch_is_labelled_unavailable():
+    results = [
+        AuthorWorks(author=Author(orcid_id="0000-0000-0000-0005", name="Failed"), fetch_failed=True)
+    ]
+    output = format_author_list(results)
+    assert "- (works unavailable: request failed)" in output
+    assert "no public works listed" not in output

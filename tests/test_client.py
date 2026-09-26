@@ -50,3 +50,21 @@ def test_fetch_work_titles_rejects_bad_orcid_id():
     client = OrcidClient(CONFIG)
     with pytest.raises(OrcidApiError):
         client.fetch_work_titles("not-an-orcid")
+
+
+def test_get_json_wraps_read_timeout(monkeypatch):
+    import urllib.request
+
+    class _Response:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *args):
+            return False
+
+        def read(self):
+            raise TimeoutError("timed out")
+
+    monkeypatch.setattr(urllib.request, "urlopen", lambda *a, **k: _Response())
+    with pytest.raises(OrcidApiError):
+        OrcidClient(CONFIG)._get_json("https://pub.orcid.org/v3.0/x")

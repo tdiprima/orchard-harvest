@@ -17,7 +17,9 @@ def format_author_list(results: list[AuthorWorks]) -> str:
     blocks: list[str] = []
     for result in results:
         lines = [f"{result.author.name} ({result.author.orcid_id})"]
-        if result.work_titles:
+        if result.fetch_failed:
+            lines.append("- (works unavailable: request failed)")
+        elif result.work_titles:
             lines.extend(f"- {title}" for title in result.work_titles)
         else:
             lines.append("- (no public works listed)")

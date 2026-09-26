@@ -2,6 +2,7 @@
 
 import logging
 import os
+import urllib.parse
 from dataclasses import dataclass
 
 DEFAULT_API_BASE_URL = "https://pub.orcid.org/v3.0"
@@ -48,6 +49,17 @@ def _read_positive_int(name: str, default: int, upper_bound: int) -> int:
     return value
 
 
+def _read_api_base_url() -> str:
+    """Read ORCID_API_BASE_URL and require an http(s) URL with a hostname."""
+    raw_value = os.environ.get("ORCID_API_BASE_URL", DEFAULT_API_BASE_URL).strip()
+    parsed = urllib.parse.urlsplit(raw_value)
+    if parsed.scheme not in ("http", "https") or not parsed.hostname:
+        raise ConfigError(
+            f"ORCID_API_BASE_URL must be an http(s) URL with a hostname, got {raw_value!r}"
+        )
+    return raw_value.rstrip("/")
+
+
 def load_config() -> Config:
     """Build a Config from the environment, failing fast on bad values."""
     affiliation = os.environ.get("ORCID_AFFILIATION", DEFAULT_AFFILIATION).strip()
@@ -58,7 +70,7 @@ def load_config() -> Config:
     access_token = os.environ.get("ORCID_ACCESS_TOKEN") or None
 
     return Config(
-        api_base_url=os.environ.get("ORCID_API_BASE_URL", DEFAULT_API_BASE_URL).rstrip("/"),
+        api_base_url=_read_api_base_url(),
         affiliation=affiliation,
         max_authors=_read_positive_int("ORCID_MAX_AUTHORS", DEFAULT_MAX_AUTHORS, MAX_AUTHORS_LIMIT),
         max_works=_read_positive_int("ORCID_MAX_WORKS", DEFAULT_MAX_WORKS, MAX_WORKS_LIMIT),
